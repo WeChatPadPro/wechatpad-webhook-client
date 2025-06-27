@@ -1,78 +1,105 @@
-# WeChatPad Webhook Client
+# 微信Webhook测试工具
 
-[![GitHub Repo](https://img.shields.io/badge/github-repo-blue?logo=github)](https://github.com/WeChatPadPro/wechatpad-webhook-client)
+这个项目包含两个Python脚本，用于测试微信Webhook功能：
+1. `webhook_client_test.py`: Webhook接收服务器，用于接收和处理微信发送的webhook消息
+2. `webhook_config_test.py`: Webhook配置工具，用于配置和测试webhook连接
 
-这是一个用于接收 [WeChatPadPro](https://github.com/WeChatPadPro) 推送消息的 Webhook 客户端，基于 Python 构建，支持签名验证、配置热加载、日志记录、消息重试及持久化，适用于需要集成微信消息推送的后端服务。
+## 前提条件
 
-## ✨ 特性 Features
+- Python 3.6+
+- 安装所需依赖：
+  ```bash
+  pip install flask requests
+  ```
 
-- 📬 接收 Webhook 推送
-- 🔐 可选的签名验证机制
-- 🔄 消息失败自动重试
-- 🗃 SQLite 本地持久化
-- 📝 日志输出支持
-- ❤️ 心跳检测功能
-- 🌐 WebSocket 支持（可选）
+## 使用方法
 
-## 🚀 快速开始
+### 1. 启动Webhook接收服务器
 
 ```bash
-git clone https://github.com/WeChatPadPro/wechatpad-webhook-client.git
-cd wechatpad-webhook-client
-pip install -r requirements.txt
-cp .env.example .env
-python main.py
+python webhook_client_test.py -p 8000 -s your_secret_key -v
 ```
 
-## ⚙️ 配置方式
+参数说明：
+- `-p, --port`: 服务器端口号，默认为8000
+- `-s, --secret`: Webhook密钥，用于验证签名
+- `-v, --verify`: 是否验证签名
+- `-o, --output`: 消息保存文件，默认为webhook_messages.json
 
-你可以使用 `.env` 或 `data/config.json` 文件进行配置。支持以下环境变量：
+启动后，服务器将监听在 `http://你的IP地址:8000/webhook`
 
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `SERVER_HOST` | 0.0.0.0 | 监听地址 |
-| `SERVER_PORT` | 8080 | Web 服务端口 |
-| `WEBHOOK_PATH` | /webhook | 接收路径 |
-| `SECRET_KEY` | 空 | 用于验证签名（可选） |
-| `DB_PATH` | `data/webhook_messages.db` | 数据库存储路径 |
-| `LOG_FILE` | `logs/webhook.log` | 日志文件路径 |
-| `HEARTBEAT_INTERVAL` | 60 | 心跳检测间隔（秒） |
-| `WS_ENABLED` | false | 启用 WebSocket（true/false） |
-| `WS_URL` | 空 | WebSocket 服务地址 |
+### 2. 配置Webhook
 
-## 📡 Webhook 接口说明
-
-- **URL**: `http://<SERVER_HOST>:<SERVER_PORT><WEBHOOK_PATH>`
-- **方法**: `POST`
-- **内容类型**: `application/json`
-- **可选签名**: `X-Signature` 请求头，用于验证请求是否合法（需配置 `SECRET_KEY`）
-
-### 示例 Payload
-
-```json
-{
-  "type": "message",
-  "from": "wxid_123456",
-  "content": "Hello from WeChatPad"
-}
+```bash
+python webhook_config_test.py --url http://微信API服务器地址 --key 你的微信API密钥 --webhook-url http://你的IP地址:8000/webhook --secret your_secret_key
 ```
 
-## 📁 项目结构
+参数说明：
+- `--url`: 微信API服务器地址
+- `--key`: 微信API密钥
+- `--action`: 执行操作，可选值：config(配置)、test(测试)、status(状态)、all(全部)，默认为all
+- `--webhook-url`: Webhook接收地址
+- `--secret`: Webhook密钥
+- `--enable`: 是否启用Webhook，默认为True
+- `--timeout`: 请求超时时间(秒)，默认为10
+- `--retry`: 失败重试次数，默认为3
+- `--types`: 消息类型，逗号分隔，默认为1,3,34,43,47,49
+- `--include-self`: 是否包含自己发送的消息，默认为True
 
-```
-wechatpad-webhook-client/
-├── data/                  # 配置与数据库目录
-├── logs/                  # 日志输出目录
-├── main.py                # 主程序入口
-├── config.py              # 配置管理模块
-├── requirements.txt
-└── .env.example           # 配置示例文件
-```
+### 3. 查看接收到的消息
 
-## 🛠️ 贡献 Contributing
+Webhook接收服务器会将接收到的消息保存在 `webhook_messages.json` 文件中，同时也会在控制台和日志文件 `webhook_client.log` 中输出消息内容。
 
-欢迎提交 PR 和 issue 来优化项目！
+## 消息类型参考
 
-## 📝 License
+| 类型值 | 说明 |
+|-------|------|
+| 1 | 文本消息 |
+| 3 | 图片消息 |
+| 34 | 语音消息 |
+| 43 | 视频消息 |
+| 47 | 动画表情 |
+| 49 | 应用消息（文件、链接等） |
+| 10000 | 系统提示 |
 
-本项目基于 MIT 协议开源。
+## 完整测试流程示例
+
+1. 启动Webhook接收服务器：
+   ```bash
+   python webhook_client_test.py -p 8000 -s mysecretkey
+   ```
+
+2. 配置Webhook并测试连通性：
+   ```bash
+   python webhook_config_test.py --url http://微信API服务器地址 --key 你的微信API密钥 --webhook-url http://你的公网IP:8000/webhook --secret mysecretkey
+   ```
+
+3. 发送一条微信消息，然后查看webhook_messages.json文件或webhook_client.log日志，确认是否收到消息。
+
+## 注意事项
+
+1. 确保你的服务器可以从外网访问，或者使用内网穿透工具（如ngrok）将本地服务器暴露到公网
+2. 如果使用签名验证，确保配置Webhook时的secret与启动接收服务器时的secret一致
+3. 如果无法接收消息，请检查：
+   - 服务器防火墙是否开放了对应端口
+   - Webhook配置的URL是否正确
+   - 网络连接是否正常
+   - 查看日志文件排查问题
+
+## 调试技巧
+
+1. 使用 `--action status` 查看Webhook配置状态：
+   ```bash
+   python webhook_config_test.py --url http://微信API服务器地址 --key 你的微信API密钥 --action status
+   ```
+
+2. 使用 `--action test` 测试Webhook连通性：
+   ```bash
+   python webhook_config_test.py --url http://微信API服务器地址 --key 你的微信API密钥 --action test
+   ```
+
+3. 如果在内网环境测试，可以使用ngrok等工具进行内网穿透：
+   ```bash
+   ngrok http 8000
+   ```
+   然后使用ngrok提供的公网URL作为webhook-url
